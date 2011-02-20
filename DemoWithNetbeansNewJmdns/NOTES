@@ -22,3 +22,11 @@ mvn install:install-file \
   -Dversion=3.4.0 \
   -Dpackaging=jar \
   -DgeneratePom=true
+
+
+jmdns 3.4.0 has two times each class...
+mkdir unjar
+cd unjar/
+jar xvf ../../lib/Omiscid/jmdns-3.4.0.jar 
+jar cvfm ../../lib/Omiscid/jmdns-3.4.0.jar META-INF/MANIFEST.MF com/ javax/
+
