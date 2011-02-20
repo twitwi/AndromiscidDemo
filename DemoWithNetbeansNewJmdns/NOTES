@@ -1,0 +1,24 @@
+
+Additionnal things:
+To build:
+- ant
+- if dex failed:
+  rm -fr build/classes/fr/prima/omiscid/dnssd/interf/
+  rm -fr build/classes/fr/prima/omiscid/dnssd/common/
+- ant
+
+To install:
+- $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk
+
+On PC, in /etc/hosts, needed to add something like:
+    10.42.43.45     10-42-43-45
+(this is because new jmdns replaces '.' by '-' in names)
+
+
+mvn install:install-file \
+  -Dfile=$HOME/app/jmdns-3.4.0/lib/jmdns.jar \
+  -DgroupId=javax.jmdns \
+  -DartifactId=jmdns \
+  -Dversion=3.4.0 \
+  -Dpackaging=jar \
+  -DgeneratePom=true
