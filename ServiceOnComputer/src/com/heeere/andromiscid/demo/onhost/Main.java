@@ -5,6 +5,8 @@
 
 package com.heeere.andromiscid.demo.onhost;
 
+import fr.prima.omiscid.com.TcpClient;
+import fr.prima.omiscid.control.OmiscidService;
 import fr.prima.omiscid.dnssd.interf.DNSSDFactory;
 import fr.prima.omiscid.user.connector.ConnectorListener;
 import fr.prima.omiscid.user.connector.ConnectorType;
@@ -33,6 +35,7 @@ public class Main {
      */
     public static void main(String[] args) throws IOException {
         //DNSSDFactory.DefaultFactory.factoryToTryFirst = "jmdns";
+        TcpClient.stripTrailingDotLocalDot = false;
         DNSSDFactory.DefaultFactory.verboseMode = true;
         ServiceFactory factory = new ServiceFactoryImpl();
         ServiceRepository repository = factory.createServiceRepository();

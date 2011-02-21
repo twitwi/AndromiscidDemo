@@ -1,4 +1,9 @@
 
+JAXB! on 2.2
+- added xercesImpl.jar in the classpath
+- created missing core (awt) classes
+---> not sufficient...
+
 Additionnal things:
 To build:
 - ant
@@ -10,10 +15,11 @@ To build:
 To install:
 - $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk
 
+
 On PC, in /etc/hosts, needed to add something like:
     10.42.43.45     10-42-43-45
 (this is because new jmdns replaces '.' by '-' in names)
-
+(not needed with android 2.2 it seems)
 
 mvn install:install-file \
   -Dfile=$HOME/app/jmdns-3.4.0/lib/jmdns.jar \
