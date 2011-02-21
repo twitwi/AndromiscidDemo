@@ -50,7 +50,7 @@ public class AndromiscidNB extends Activity
 
 
     private void setUp() {
-    	DNSSDFactory.DefaultFactory.factoryToTryFirst = "fr.prima.omiscid.dnssd.jmdns.DNSSDFactoryJmdns";
+    	DNSSDFactory.DefaultFactory.factoryToTryFirst = "jmdns";
     	DNSSDFactory.DefaultFactory.verboseMode = true;
     	DNSSDFactory.DefaultFactory.verboseModeMore = true;
 

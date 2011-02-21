@@ -1,0 +1,14 @@
+
+To build:
+- ant
+
+To install:
+- $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk
+
+Important things are:
+- The manifest
+- The source code
+- The GUI (layout+values)
+- patch the nbproject/build-impl.xml (2)
+- ant ; rm -rf build/classes/fr ; ant
+- $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk  && $SDK/platform-tools/adb logcat

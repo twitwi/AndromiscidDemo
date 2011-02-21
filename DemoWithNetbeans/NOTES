@@ -1,14 +1,38 @@
 
+JAXB! on 2.2
+- added xercesImpl.jar in the classpath
+- created missing core (awt) classes
+---> not sufficient...
+
+Additionnal things:
 To build:
+- ant
+- if dex failed:
+  rm -fr build/classes/fr/prima/omiscid/dnssd/interf/
+  rm -fr build/classes/fr/prima/omiscid/dnssd/common/
 - ant
 
 To install:
 - $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk
 
-Important things are:
-- The manifest
-- The source code
-- The GUI (layout+values)
-- patch the nbproject/build-impl.xml (2)
-- ant ; rm -rf build/classes/fr ; ant
-- $SDK/platform-tools/adb install -r dist/DemoWithNetbeans.apk  && $SDK/platform-tools/adb logcat
+
+On PC, in /etc/hosts, needed to add something like:
+    10.42.43.45     10-42-43-45
+(this is because new jmdns replaces '.' by '-' in names)
+(not needed with android 2.2 it seems)
+
+mvn install:install-file \
+  -Dfile=$HOME/app/jmdns-3.4.0/lib/jmdns.jar \
+  -DgroupId=javax.jmdns \
+  -DartifactId=jmdns \
+  -Dversion=3.4.0 \
+  -Dpackaging=jar \
+  -DgeneratePom=true
+
+
+jmdns 3.4.0 has two times each class...
+mkdir unjar
+cd unjar/
+jar xvf ../../lib/Omiscid/jmdns-3.4.0.jar 
+jar cvfm ../../lib/Omiscid/jmdns-3.4.0.jar META-INF/MANIFEST.MF com/ javax/
+
