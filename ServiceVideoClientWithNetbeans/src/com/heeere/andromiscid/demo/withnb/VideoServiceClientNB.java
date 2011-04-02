@@ -2,6 +2,7 @@ package com.heeere.andromiscid.demo.withnb;
 
 import android.graphics.Bitmap;
 import fr.prima.omiscid.dnssd.interf.DNSSDFactory;
+import fr.prima.omiscid.user.connector.Message;
 import fr.prima.omiscid.user.service.Service;
 import fr.prima.omiscid.user.service.ServiceFilters;
 import fr.prima.omiscid.user.service.ServiceFactory;
@@ -10,17 +11,19 @@ import fr.prima.omiscid.user.service.ServiceRepository;
 import fr.prima.omiscid.user.service.ServiceRepositoryListener;
 import fr.prima.omiscid.user.connector.ConnectorType;
 import fr.prima.omiscid.user.service.impl.ServiceFactoryImpl;
-import fr.prima.omiscid.user.util.Utility;
 import android.app.Activity;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Button;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ImageView;
-import com.heeere.andromiscid.BitmapSourceListener;
-import com.heeere.andromiscid.ServiceImageSource;
+import fr.prima.omiscid.user.connector.ConnectorListener;
+import fr.prima.omiscid.user.exception.ConnectionRefused;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,7 +32,6 @@ public class VideoServiceClientNB extends Activity {
     ServiceFactory f;
     ServiceRepository repo;
     Service s;
-    ServiceImageSource source;
     android.net.wifi.WifiManager.MulticastLock lock;
     android.os.Handler handler = new android.os.Handler();
     private ImageView camview;
@@ -43,7 +45,8 @@ public class VideoServiceClientNB extends Activity {
         Button button = (Button) this.findViewById(R.id.button);
         button.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                notifyUser("click click click");
+                s.closeAllConnections();
+                //notifyUser("click click click");
                 //s.sendToAllClients("androidInited", Utility.message("Hi from " + branding));
             }
         });
@@ -59,6 +62,8 @@ public class VideoServiceClientNB extends Activity {
         }, 2000);
 
     }
+
+    ConcurrentLinkedQueue<ServiceProxy> services = new ConcurrentLinkedQueue<ServiceProxy>();
 
     /** Called when the activity is first created. */
     private void setUp() throws IOException {
@@ -79,35 +84,36 @@ public class VideoServiceClientNB extends Activity {
 
         //s.start();
         //notifyUser("s started");
-        final BitmapSourceListener listener = new BitmapSourceListener() {
-            public void stopped() {
-            }
-
-            public void imageReceived(Bitmap bmp) {
-                notifyBmp(bmp);
-            }
-        };
 
         repo = f.createServiceRepository();
 
         repo.addListener(
                 new ServiceRepositoryListener() {
                     @Override
-                    public synchronized void serviceRemoved(ServiceProxy serviceProxy) {
-                        notifyUser("removed " + serviceProxy.getPeerIdAsString() + " " + serviceProxy.getName());
-                        if (source != null) {
-                            source.stop();
-                            source = null;
-                        }
-                    }
-
-                    @Override
                     public synchronized void serviceAdded(ServiceProxy serviceProxy) {
                         notifyUser("added " + serviceProxy.getPeerIdAsString() + " " + serviceProxy.getName());
-                        if (source == null) {
-                            source = ServiceImageSource.createSmartImageSourceAndConnect(s, "sink", serviceProxy, true);
-                            source.addBitmapSourceListener(listener);
+                        boolean shouldConnect = services.isEmpty();
+                        if (services.size() > 1) {
+                            services.add(serviceProxy);
+                        } else {
+                            // this case is for the common case of a service get connected to then the others get added
+                            // -> without this code, the first button press appear to do nothing because the first service is still next in the queue
+                            ServiceProxy first = services.poll();
+                            services.add(serviceProxy);
+                            if (first == null) { // defensive thing
+                                shouldConnect = true;
+                            } else {
+                                services.add(first);                                
+                            }
                         }
+                        if (shouldConnect) {
+                            connectNext();
+                        }
+                    }
+                    @Override
+                    public synchronized void serviceRemoved(ServiceProxy serviceProxy) {
+                        notifyUser("removed " + serviceProxy.getPeerIdAsString() + " " + serviceProxy.getName());
+                        services.remove(serviceProxy);
                     }
 
                     @Override
@@ -115,17 +121,67 @@ public class VideoServiceClientNB extends Activity {
                         super.finalize();
                         notifyUser("gc'ed");
                     }
+
                 }, ServiceFilters.nameIs("ServiceVideo"));
-    }
-
-    private void notifyBmp(final Bitmap bmp) {
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                camview.setImageBitmap(bmp);
+        s.addConnectorListener("sink", new ConnectorListener() {
+            public void messageReceived(Service srvc, String string, Message msg) {
+                notifyRaw(msg.getBuffer().clone());
             }
-        }, 1);
+
+            public void disconnected(Service srvc, String string, int i) {
+                connectNext();
+            }
+
+            public void connected(Service srvc, String string, int i) {
+            }
+        });
+    }
+    public void connectNext() {
+        Logger.getLogger(VideoServiceClientNB.class.getName()).log(Level.INFO, "CONNECT NEXT "+services.size());
+        ServiceProxy next = services.poll();
+        if (next != null) {
+            services.add(next);
+            try {
+                s.connectTo("sink", next, "jpegVideoStream");
+            } catch (ConnectionRefused ex) {
+                services.remove(next);
+                connectNext();
+            }
+        }
     }
 
+    AtomicReference<Bitmap> toPost = new AtomicReference<Bitmap>();
+    AtomicReference<byte[]> rawToPost = new AtomicReference<byte[]>();
+    private void notifyRaw(byte[] clone) {
+        rawToPost.set(clone);
+        handler.post(new Runnable() {
+            public void run() {
+                updateTheRaw();
+            }
+        });
+    }
+    private void notifyBmp(final Bitmap bmp) {
+        toPost.set(bmp);
+        handler.post(new Runnable() {
+            public void run() {
+                updateTheBitmap();
+            }
+        });
+    }
+    // runned in EDT
+    private void updateTheRaw() {
+        byte[] toSet = rawToPost.getAndSet(null);
+        if (toSet != null) {
+            camview.setImageBitmap(BitmapFactory.decodeByteArray(toSet, 0, toSet.length));
+        }
+    }
+    private void updateTheBitmap() {
+        Bitmap toSet = toPost.getAndSet(null);
+        if (toSet != null) {
+            camview.setImageBitmap(toSet);
+        }
+    }
+    
     private void notifyUser(final String msg) {
         handler.postDelayed(new Runnable() {
             public void run() {
@@ -148,10 +204,11 @@ public class VideoServiceClientNB extends Activity {
         if (repo != null) {
             repo.stop();
         }
+        /*
         if (source != null) {
             source.stop();
             source = null;
-        }
+        }*/
         if (s != null) {
             s.closeAllConnections();
             s.stop();
