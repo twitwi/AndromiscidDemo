@@ -1,6 +1,5 @@
 package com.heeere.andromiscid.demo.withnb;
 
-import android.graphics.Bitmap;
 import fr.prima.omiscid.dnssd.interf.DNSSDFactory;
 import fr.prima.omiscid.user.connector.Message;
 import fr.prima.omiscid.user.service.Service;
@@ -150,7 +149,6 @@ public class VideoServiceClientNB extends Activity {
         }
     }
 
-    AtomicReference<Bitmap> toPost = new AtomicReference<Bitmap>();
     AtomicReference<byte[]> rawToPost = new AtomicReference<byte[]>();
     private void notifyRaw(byte[] clone) {
         rawToPost.set(clone);
@@ -160,25 +158,11 @@ public class VideoServiceClientNB extends Activity {
             }
         });
     }
-    private void notifyBmp(final Bitmap bmp) {
-        toPost.set(bmp);
-        handler.post(new Runnable() {
-            public void run() {
-                updateTheBitmap();
-            }
-        });
-    }
     // runned in EDT
     private void updateTheRaw() {
         byte[] toSet = rawToPost.getAndSet(null);
         if (toSet != null) {
             camview.setImageBitmap(BitmapFactory.decodeByteArray(toSet, 0, toSet.length));
-        }
-    }
-    private void updateTheBitmap() {
-        Bitmap toSet = toPost.getAndSet(null);
-        if (toSet != null) {
-            camview.setImageBitmap(toSet);
         }
     }
     
@@ -204,11 +188,6 @@ public class VideoServiceClientNB extends Activity {
         if (repo != null) {
             repo.stop();
         }
-        /*
-        if (source != null) {
-            source.stop();
-            source = null;
-        }*/
         if (s != null) {
             s.closeAllConnections();
             s.stop();
